@@ -30,24 +30,40 @@ std::vector<Caixa *> listaDeCaixas = {};
 
 // Função para desenhar uma caixa
 void desenharCaixa(float x, float y, Cor cor) {
+  // Converte as coordenadas de pixel para
+  // coordenadas normalizadas do OpenGL (-1 a 1)
+  float normalizedX = (2.0f * x / WINDOW_WIDTH) - 1.0f;
+  float normalizedY = (2.0f * y / WINDOW_HEIGHT) - 1.0f;
+
+  // Convertendo o tamanho da caixa de pixels para coordenadas normalizadas
+  float normalizedSize = (2.0f * CAIXA_TAMANHO / WINDOW_WIDTH);
+
   glColor3f(cor.r, cor.g, cor.b);
 
   glBegin(GL_QUADS);
   // Desenhar o quadrado da caixa
-  glVertex2f(x - CAIXA_TAMANHO / 2, y - CAIXA_TAMANHO / 2);
-  glVertex2f(x + CAIXA_TAMANHO / 2, y - CAIXA_TAMANHO / 2);
-  glVertex2f(x + CAIXA_TAMANHO / 2, y + CAIXA_TAMANHO / 2);
-  glVertex2f(x - CAIXA_TAMANHO / 2, y + CAIXA_TAMANHO / 2);
+  glVertex2f(normalizedX - normalizedSize / 2,
+             normalizedY - normalizedSize / 2);
+  glVertex2f(normalizedX + normalizedSize / 2,
+             normalizedY - normalizedSize / 2);
+  glVertex2f(normalizedX + normalizedSize / 2,
+             normalizedY + normalizedSize / 2);
+  glVertex2f(normalizedX - normalizedSize / 2,
+             normalizedY + normalizedSize / 2);
   glEnd();
 
-  // Desnhar borda preta
+  // Desenhar borda preta
   glColor3f(0.0f, 0.0f, 0.0f);
   glLineWidth(2.0f);
   glBegin(GL_LINE_LOOP);
-  glVertex2f(x - CAIXA_TAMANHO / 2, y - CAIXA_TAMANHO / 2);
-  glVertex2f(x + CAIXA_TAMANHO / 2, y - CAIXA_TAMANHO / 2);
-  glVertex2f(x + CAIXA_TAMANHO / 2, y + CAIXA_TAMANHO / 2);
-  glVertex2f(x - CAIXA_TAMANHO / 2, y + CAIXA_TAMANHO / 2);
+  glVertex2f(normalizedX - normalizedSize / 2,
+             normalizedY - normalizedSize / 2);
+  glVertex2f(normalizedX + normalizedSize / 2,
+             normalizedY - normalizedSize / 2);
+  glVertex2f(normalizedX + normalizedSize / 2,
+             normalizedY + normalizedSize / 2);
+  glVertex2f(normalizedX - normalizedSize / 2,
+             normalizedY + normalizedSize / 2);
   glEnd();
   glLineWidth(1.0f);
 }
@@ -82,16 +98,6 @@ void display() {
   drawAllBoxes();
 
   glutSwapBuffers();
-}
-
-// Função de reshape para ajustar a viewport e a projeção
-void reshape(int w, int h) {
-  glViewport(0, 0, w, h);
-  glMatrixMode(GL_PROJECTION);
-  glLoadIdentity();
-  glOrtho(0, w, 0, h, -1, 1);
-  glMatrixMode(GL_MODELVIEW);
-  glLoadIdentity();
 }
 
 // Função de teclado para adicionar ou remover caixas
@@ -168,12 +174,7 @@ int main(int argc, char **argv) {
 
   // Registar as funções de callback
   glutDisplayFunc(display);
-  glutReshapeFunc(reshape);
   glutKeyboardFunc(keyboard);
-
-  // Redimensionar a janela para garantir que a viewport e a projeção estão
-  // corretas
-  reshape(WINDOW_WIDTH, WINDOW_HEIGHT);
 
   glutMainLoop();
   return 0;
