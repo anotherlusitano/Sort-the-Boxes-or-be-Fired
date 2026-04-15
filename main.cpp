@@ -11,6 +11,11 @@ const float CAIXA_TAMANHO = 60.0f;
 const float CAIXA_ESPACAMENTO = 100.0f; // Espaçamento entre as caixas
 const float CAIXA_POSICAO_Y = 100.0f;   // Distância do chão
 
+// Variáveis que guardam o ângulo de cada articulação
+float anguloOmbro = 180.0f;
+float anguloCotovelo = 0.0f;
+float anguloMao = 0.0f;
+
 enum TipoCaixa { CAIXA_VERMELHA, CAIXA_AZUL, CAIXA_VERDE, CAIXA_FANTASMA };
 
 struct Cor {
@@ -91,11 +96,93 @@ void drawAllBoxes() {
   }
 }
 
+void desenharRobo() {
+  glPushMatrix();
+  // Movemos o robô um pouco para a esquerda para caber no ecrã
+  // e pegar apenas a primeira caixa
+  glTranslatef(0.35f, 0.1f, 0.0f);
+
+  // ==========================================
+  // 1. O OMBRO (O "Pai")
+  // ==========================================
+  // Roda o ombro (e tudo o que vier depois)
+  glRotatef(anguloOmbro, 0.0f, 0.0f, 1.0f);
+
+  glColor3f(0.2f, 0.5f, 0.8f); // Azul
+  glBegin(GL_POLYGON);
+  glVertex2f(0.0f, -0.05f); // Começa na origem (0,0)
+  glVertex2f(0.4f, -0.05f); // Comprimento do ombro: 0.4
+  glVertex2f(0.4f, 0.05f);
+  glVertex2f(0.0f, 0.05f);
+  glEnd();
+
+  // ==========================================
+  // 2. O COTOVELO (O "Filho")
+  // ==========================================
+  // Movemos o eixo para a ponta do ombro (0.4) para o cotovelo nascer lá
+  glTranslatef(0.4f, 0.0f, 0.0f);
+
+  // A GAVETA MÁGICA: Guardamos o estado aqui para que a rotação do cotovelo não
+  // afete o que vier depois!
+  glPushMatrix();
+
+  glRotatef(anguloCotovelo, 0.0f, 0.0f, 1.0f); // Roda apenas o cotovelo
+
+  glColor3f(0.8f, 0.2f, 0.2f); // Vermelho
+  glBegin(GL_POLYGON);
+  glVertex2f(0.0f, -0.04f);
+  glVertex2f(0.3f, -0.04f); // Comprimento do cotovelo: 0.3
+  glVertex2f(0.3f, 0.04f);
+  glVertex2f(0.0f, 0.04f);
+  glEnd();
+
+  // ==========================================
+  // 3. A MÃO (O "Neto")
+  // ==========================================
+  glTranslatef(0.3f, 0.0f, 0.0f);
+  glRotatef(anguloMao, 0.0f, 0.0f, 2.0f); // Roda apenas a MÃO
+
+  glColor3f(0.0f, 0.5f, 0.0f); // Vermelho
+  glBegin(GL_POLYGON);
+  glVertex2f(0.0f, -0.05f);
+  glVertex2f(0.1f, -0.05f); // Comprimento do cotovelo: 0.1
+  glVertex2f(0.1f, 0.05f);
+  glVertex2f(0.0f, 0.05f);
+  glEnd();
+
+  // ==========================================
+  // 4. OS DEDOS (Os "Bisnetos")
+  // ==========================================
+  glTranslatef(0.1f, 0.025f, 0.0f);
+  glColor3f(0.5f, 0.1f, 0.1f); // Vermelho
+
+  glBegin(GL_POLYGON);
+  glVertex2f(0.0f, -0.025f);
+  glVertex2f(0.05f, -0.01f); // Comprimento do cotovelo: 0.1
+  glVertex2f(0.05f, 0.01f);
+  glVertex2f(0.0f, 0.025f);
+  glEnd();
+
+  glTranslatef(0.0f, -0.05f, 0.0f);
+
+  glBegin(GL_POLYGON);
+  glVertex2f(0.0f, -0.025f);
+  glVertex2f(0.05f, -0.01f); // Comprimento do cotovelo: 0.1
+  glVertex2f(0.05f, 0.01f);
+  glVertex2f(0.0f, 0.025f);
+  glEnd();
+
+  // FECHA A GAVETA
+  glPopMatrix();
+  glPopMatrix();
+}
+
 // Função de exibição
 void display() {
   glClear(GL_COLOR_BUFFER_BIT);
 
   drawAllBoxes();
+  desenharRobo();
 
   glutSwapBuffers();
 }
@@ -149,6 +236,25 @@ void keyboard(unsigned char key, int x, int y) {
   }
   case 27: // tecla ESC
     exit(0);
+    break;
+  // Robot Keys
+  case 'h':
+    anguloOmbro += 5.0f;
+    break;
+  case 'l':
+    anguloOmbro -= 5.0f;
+    break;
+  case 'j':
+    anguloCotovelo += 5.0f;
+    break;
+  case 'k':
+    anguloCotovelo -= 5.0f;
+    break;
+  case 's':
+    anguloMao += 5.0f;
+    break;
+  case 'w':
+    anguloMao -= 5.0f;
     break;
   }
 
