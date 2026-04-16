@@ -1,20 +1,16 @@
 #include <GL/freeglut.h>
+#include <cmath>
 #include <cstdio>
 #include <vector>
 
 // Dimensões da Janela
-const int WINDOW_WIDTH = 800;
-const int WINDOW_HEIGHT = 600;
+const int LARGURA_JANELA = 800;
+const int ALTURA_JANELA = 600;
 
-// Definições para as caixas
-const float CAIXA_TAMANHO = 60.0f;
-const float CAIXA_ESPACAMENTO = 100.0f; // Espaçamento entre as caixas
-const float CAIXA_POSICAO_Y = 100.0f;   // Distância do chão
-
-// Variáveis que guardam o ângulo de cada articulação
-float anguloOmbro = 180.0f;
-float anguloCotovelo = 0.0f;
-float anguloMao = 0.0f;
+// Configurações de exibição da caixa
+const float TAMANHO_CAIXA = 60.0f;
+const float ESPACAMENTO_CAIXAS = 100.0f; // Espaço entre caixas
+const float POSICAO_Y_CAIXA = 100.0f;    // Distância do fundo
 
 enum TipoCaixa { CAIXA_VERMELHA, CAIXA_AZUL, CAIXA_VERDE, CAIXA_FANTASMA };
 
@@ -30,135 +26,122 @@ struct Caixa {
   float x, y;
 };
 
-// Lista de caixas (fila)
 std::vector<Caixa *> listaDeCaixas = {};
 
-// Função para desenhar uma caixa
-void desenharCaixa(float x, float y, Cor cor) {
-  // Converte as coordenadas de pixel para
-  // coordenadas normalizadas do OpenGL (-1 a 1)
-  float normalizedX = (2.0f * x / WINDOW_WIDTH) - 1.0f;
-  float normalizedY = (2.0f * y / WINDOW_HEIGHT) - 1.0f;
+// Variáveis globais para os ângulos do braço robótico
+float anguloOmbro = 180.0f;
+float anguloCotovelo = 0.0f;
+float anguloMao = 0.0f;
 
-  // Convertendo o tamanho da caixa de pixels para coordenadas normalizadas
-  float normalizedSize = (2.0f * CAIXA_TAMANHO / WINDOW_WIDTH);
+// Variável global para rastrear a caixa apanhada
+Caixa *caixaApanhada = nullptr;
 
-  glColor3f(cor.r, cor.g, cor.b);
+// Função para obter a posição dos dedos baseada nos ângulos do braço
+void obterPosicaoDedos(float &dedoX, float &dedoY) {
+  // Posição base do ombro
+  float x = 0.35f;
+  float y = 0.1f;
 
-  glBegin(GL_QUADS);
-  // Desenhar o quadrado da caixa
-  glVertex2f(normalizedX - normalizedSize / 2,
-             normalizedY - normalizedSize / 2);
-  glVertex2f(normalizedX + normalizedSize / 2,
-             normalizedY - normalizedSize / 2);
-  glVertex2f(normalizedX + normalizedSize / 2,
-             normalizedY + normalizedSize / 2);
-  glVertex2f(normalizedX - normalizedSize / 2,
-             normalizedY + normalizedSize / 2);
-  glEnd();
+  // Adiciona segmento do ombro (0.4 unidades de comprimento)
+  float anguloOmbroRad = anguloOmbro * M_PI / 180.0f;
+  x += 0.4f * cosf(anguloOmbroRad);
+  y += 0.4f * sinf(anguloOmbroRad);
 
-  // Desenhar borda preta
-  glColor3f(0.0f, 0.0f, 0.0f);
-  glLineWidth(2.0f);
-  glBegin(GL_LINE_LOOP);
-  glVertex2f(normalizedX - normalizedSize / 2,
-             normalizedY - normalizedSize / 2);
-  glVertex2f(normalizedX + normalizedSize / 2,
-             normalizedY - normalizedSize / 2);
-  glVertex2f(normalizedX + normalizedSize / 2,
-             normalizedY + normalizedSize / 2);
-  glVertex2f(normalizedX - normalizedSize / 2,
-             normalizedY + normalizedSize / 2);
-  glEnd();
-  glLineWidth(1.0f);
+  // Adiciona segmento do cotovelo (0.3 unidades de comprimento)
+  float anguloCotoveloRad = (anguloOmbro + anguloCotovelo) * M_PI / 180.0f;
+  x += 0.3f * cosf(anguloCotoveloRad);
+  y += 0.3f * sinf(anguloCotoveloRad);
+
+  // Adiciona segmento da mão (0.1 unidades de comprimento)
+  float anguloMaoRad =
+      (anguloOmbro + anguloCotovelo + anguloMao) * M_PI / 180.0f;
+  x += 0.1f * cosf(anguloMaoRad);
+  y += 0.1f * sinf(anguloMaoRad);
+
+  dedoX = x;
+  dedoY = y;
 }
 
-// Função para desenhar todas as caixas no ecrã (máximo 3)
-void drawAllBoxes() {
-  // Mostra os primeiros 3 elementos da lista
-  // Posição 0 (centro-inferior): índice 0 da lista
-  // Posição 1 (meio): índice 1 da lista
-  // Posição 2 (esquerda): índice 2 da lista
+// Função para verificar se os dedos estão tocando a caixa
+bool dedoEstaATocarCaixa(float dedoX, float dedoY, Caixa *caixa) {
+  if (caixa == nullptr)
+    return false;
 
-  int tamanhoCaixa = listaDeCaixas.size();
-  int caixasVisiveis = (tamanhoCaixa > 3) ? 3 : tamanhoCaixa;
+  // Posição da caixa em coordenadas normalizadas (sempre no centro-inferior)
+  float caixaCentroX = 0.0f; // Centro do ecrã
+  float caixaCentroY = (2.0f * POSICAO_Y_CAIXA / ALTURA_JANELA) - 1.0f;
 
-  // Calcular a posição central (centro inferior do ecrã em coordenadas)
-  float centroX = WINDOW_WIDTH / 2.0f;
-  float baseY = CAIXA_POSICAO_Y;
+  // Metade do tamanho da caixa em coordenadas normalizadas
+  float caixaMeioTamanho = (TAMANHO_CAIXA / LARGURA_JANELA);
 
-  // Desenhar as caixas visiveis
-  for (int i = 0; i < caixasVisiveis; i++) {
-    // Posição: centro, depois esquerda, depois mais à esquerda
-    float posX = centroX - (i * CAIXA_ESPACAMENTO);
+  // Verifica se o dedo está dentro dos limites da caixa (com alguma tolerância)
+  float tolerancia = 0.08f;
 
-    desenharCaixa(posX, baseY, listaDeCaixas[i]->cor);
-  }
+  return (dedoX >= caixaCentroX - caixaMeioTamanho - tolerancia &&
+          dedoX <= caixaCentroX + caixaMeioTamanho + tolerancia &&
+          dedoY >= caixaCentroY - caixaMeioTamanho - tolerancia &&
+          dedoY <= caixaCentroY + caixaMeioTamanho + tolerancia);
 }
 
+// Function to draw the robotic arm
 void desenharRobo() {
   glPushMatrix();
-  // Movemos o robô um pouco para a esquerda para caber no ecrã
-  // e pegar apenas a primeira caixa
+  // Move o robô para a esquerda para caber o ecrã e pegar a primeira caixa
   glTranslatef(0.35f, 0.1f, 0.0f);
 
   // ==========================================
-  // 1. O OMBRO (O "Pai")
+  // 1. O OMBRO
   // ==========================================
-  // Roda o ombro (e tudo o que vier depois)
   glRotatef(anguloOmbro, 0.0f, 0.0f, 1.0f);
 
-  glColor3f(0.2f, 0.5f, 0.8f); // Azul
+  glColor3f(0.2f, 0.5f, 0.8f); // Blue
   glBegin(GL_POLYGON);
-  glVertex2f(0.0f, -0.05f); // Começa na origem (0,0)
-  glVertex2f(0.4f, -0.05f); // Comprimento do ombro: 0.4
+  glVertex2f(0.0f, -0.05f);
+  glVertex2f(0.4f, -0.05f); // Shoulder length: 0.4
   glVertex2f(0.4f, 0.05f);
   glVertex2f(0.0f, 0.05f);
   glEnd();
 
   // ==========================================
-  // 2. O COTOVELO (O "Filho")
+  // 2. O COTOVELO
   // ==========================================
-  // Movemos o eixo para a ponta do ombro (0.4) para o cotovelo nascer lá
   glTranslatef(0.4f, 0.0f, 0.0f);
 
-  // A GAVETA MÁGICA: Guardamos o estado aqui para que a rotação do cotovelo não
-  // afete o que vier depois!
   glPushMatrix();
 
-  glRotatef(anguloCotovelo, 0.0f, 0.0f, 1.0f); // Roda apenas o cotovelo
+  glRotatef(anguloCotovelo, 0.0f, 0.0f, 1.0f);
 
-  glColor3f(0.8f, 0.2f, 0.2f); // Vermelho
+  glColor3f(0.8f, 0.2f, 0.2f); // Red
   glBegin(GL_POLYGON);
   glVertex2f(0.0f, -0.04f);
-  glVertex2f(0.3f, -0.04f); // Comprimento do cotovelo: 0.3
+  glVertex2f(0.3f, -0.04f); // Elbow length: 0.3
   glVertex2f(0.3f, 0.04f);
   glVertex2f(0.0f, 0.04f);
   glEnd();
 
   // ==========================================
-  // 3. A MÃO (O "Neto")
+  // 3. A MÃO
   // ==========================================
   glTranslatef(0.3f, 0.0f, 0.0f);
-  glRotatef(anguloMao, 0.0f, 0.0f, 2.0f); // Roda apenas a MÃO
+  glRotatef(anguloMao, 0.0f, 0.0f, 1.0f);
 
-  glColor3f(0.0f, 0.5f, 0.0f); // Vermelho
+  glColor3f(0.0f, 0.5f, 0.0f); // Green
   glBegin(GL_POLYGON);
   glVertex2f(0.0f, -0.05f);
-  glVertex2f(0.1f, -0.05f); // Comprimento do cotovelo: 0.1
+  glVertex2f(0.1f, -0.05f); // Hand length: 0.1
   glVertex2f(0.1f, 0.05f);
   glVertex2f(0.0f, 0.05f);
   glEnd();
 
   // ==========================================
-  // 4. OS DEDOS (Os "Bisnetos")
+  // 4. OS DEDOS
   // ==========================================
   glTranslatef(0.1f, 0.025f, 0.0f);
-  glColor3f(0.5f, 0.1f, 0.1f); // Vermelho
+  glColor3f(0.5f, 0.1f, 0.1f); // Dark Red
 
   glBegin(GL_POLYGON);
   glVertex2f(0.0f, -0.025f);
-  glVertex2f(0.05f, -0.01f); // Comprimento do cotovelo: 0.1
+  glVertex2f(0.05f, -0.01f);
   glVertex2f(0.05f, 0.01f);
   glVertex2f(0.0f, 0.025f);
   glEnd();
@@ -167,29 +150,104 @@ void desenharRobo() {
 
   glBegin(GL_POLYGON);
   glVertex2f(0.0f, -0.025f);
-  glVertex2f(0.05f, -0.01f); // Comprimento do cotovelo: 0.1
+  glVertex2f(0.05f, -0.01f);
   glVertex2f(0.05f, 0.01f);
   glVertex2f(0.0f, 0.025f);
   glEnd();
 
-  // FECHA A GAVETA
   glPopMatrix();
   glPopMatrix();
+}
+
+// Função para desenhar uma única caixa numa posição determinada (em coordenadas
+// de pixel)
+void desenharCaixa(float pixelX, float pixelY, Cor cor) {
+  // Converte coordenadas de pixel para coordenadas normalizadas de OpenGL (-1 a
+  // 1)
+  float normalizadoX = (2.0f * pixelX / LARGURA_JANELA) - 1.0f;
+  float normalizadoY = (2.0f * pixelY / ALTURA_JANELA) - 1.0f;
+
+  // Converte tamanho da caixa de pixels para coordenadas normalizadas
+  float tamanhonormalizado = (2.0f * TAMANHO_CAIXA / LARGURA_JANELA);
+
+  glColor3f(cor.r, cor.g, cor.b);
+
+  glBegin(GL_QUADS);
+  // Face frontal
+  glVertex2f(normalizadoX - tamanhonormalizado / 2,
+             normalizadoY - tamanhonormalizado / 2);
+  glVertex2f(normalizadoX + tamanhonormalizado / 2,
+             normalizadoY - tamanhonormalizado / 2);
+  glVertex2f(normalizadoX + tamanhonormalizado / 2,
+             normalizadoY + tamanhonormalizado / 2);
+  glVertex2f(normalizadoX - tamanhonormalizado / 2,
+             normalizadoY + tamanhonormalizado / 2);
+  glEnd();
+
+  // Desenha a borda
+  glColor3f(0.0f, 0.0f, 0.0f);
+  glLineWidth(2.0f);
+  glBegin(GL_LINE_LOOP);
+  glVertex2f(normalizadoX - tamanhonormalizado / 2,
+             normalizadoY - tamanhonormalizado / 2);
+  glVertex2f(normalizadoX + tamanhonormalizado / 2,
+             normalizadoY - tamanhonormalizado / 2);
+  glVertex2f(normalizadoX + tamanhonormalizado / 2,
+             normalizadoY + tamanhonormalizado / 2);
+  glVertex2f(normalizadoX - tamanhonormalizado / 2,
+             normalizadoY + tamanhonormalizado / 2);
+  glEnd();
+  glLineWidth(1.0f);
+}
+
+// Função para desenhar todas as caixas visíveis (máximo 3)
+void desenharTodasAsCaixas() {
+  // Exibe os primeiros 3 elementos da lista
+  // Posição 0 (centro-inferior): índice 0 da lista
+  // Posição 1 (meio): índice 1 da lista
+  // Posição 2 (esquerda): índice 2 da lista
+
+  int tamanho = listaDeCaixas.size();
+  int contaExibicao = (tamanho > 3) ? 3 : tamanho;
+
+  // Calcula posição central
+  float centroX = LARGURA_JANELA / 2.0f;
+  float baseY = POSICAO_Y_CAIXA;
+
+  // Desenha as primeiras caixas da contaExibicao
+  for (int i = 0; i < contaExibicao; i++) {
+    // Posição: centro, depois esquerda, depois mais à esquerda
+    float posicaoX = centroX - (i * ESPACAMENTO_CAIXAS);
+
+    desenharCaixa(posicaoX, baseY, listaDeCaixas[i]->cor);
+  }
 }
 
 // Função de exibição
 void display() {
   glClear(GL_COLOR_BUFFER_BIT);
 
-  drawAllBoxes();
+  desenharTodasAsCaixas();
   desenharRobo();
+
+  // Desenha a caixa apanhada na posição dos dedos
+  if (caixaApanhada != nullptr) {
+    float dedoX, dedoY;
+    obterPosicaoDedos(dedoX, dedoY);
+
+    // Converte de coordenadas normalizadas para coordenadas de pixel
+    float pixelX = (dedoX + 1.0f) * LARGURA_JANELA / 2.0f;
+    float pixelY = (dedoY + 1.0f) * ALTURA_JANELA / 2.0f;
+
+    desenharCaixa(pixelX, pixelY, caixaApanhada->cor);
+  }
 
   glutSwapBuffers();
 }
 
-// Função de teclado para adicionar ou remover caixas
-void keyboard(unsigned char key, int x, int y) {
-  switch (key) {
+// Função para lidar com os comandos do teclado
+void teclado(unsigned char tecla, int x, int y) {
+  switch (tecla) {
   case '1': {
     Caixa *caixaVermelha = new Caixa();
     caixaVermelha->tipo = CAIXA_VERMELHA;
@@ -223,7 +281,6 @@ void keyboard(unsigned char key, int x, int y) {
     printf("Caixa Verde adicionada (Total: %lu)\n", listaDeCaixas.size());
     break;
   }
-  // Remover a caixa mais antiga
   case '4': {
     if (!listaDeCaixas.empty()) {
       delete listaDeCaixas.front();
@@ -234,10 +291,25 @@ void keyboard(unsigned char key, int x, int y) {
     }
     break;
   }
-  case 27: // tecla ESC
-    exit(0);
+  case ' ': {
+    // Tecla de espaço para apanhar/pegar a caixa
+    if (!listaDeCaixas.empty()) {
+      float dedoX, dedoY;
+      obterPosicaoDedos(dedoX, dedoY);
+
+      bool tocando = dedoEstaATocarCaixa(dedoX, dedoY, listaDeCaixas[0]);
+
+      if (caixaApanhada == nullptr && tocando) {
+        // Cria uma NOVA caixa com uma CÓPIA dos dados (não apenas um ponteiro)
+        caixaApanhada = new Caixa(*listaDeCaixas[0]);
+        delete listaDeCaixas[0];
+        listaDeCaixas.erase(listaDeCaixas.begin());
+        printf("Caixa apanhada!\n");
+      }
+    }
     break;
-  // Robot Keys
+  }
+  // Controles do braço robótico
   case 'h':
     anguloOmbro += 5.0f;
     break;
@@ -251,10 +323,15 @@ void keyboard(unsigned char key, int x, int y) {
     anguloCotovelo -= 5.0f;
     break;
   case 's':
+  case 'S':
     anguloMao += 5.0f;
     break;
   case 'w':
+  case 'W':
     anguloMao -= 5.0f;
+    break;
+  case 27: // Tecla ESC
+    exit(0);
     break;
   }
 
@@ -262,25 +339,25 @@ void keyboard(unsigned char key, int x, int y) {
 }
 
 int main(int argc, char **argv) {
-  // Initialize GLUT
+  // Inicializa GLUT
   glutInit(&argc, argv);
   glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
-  glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
+  glutInitWindowSize(LARGURA_JANELA, ALTURA_JANELA);
 
-  // Center the window on the screen
-  int screenWidth = glutGet(GLUT_SCREEN_WIDTH);
-  int screenHeight = glutGet(GLUT_SCREEN_HEIGHT);
-  glutInitWindowPosition((screenWidth - WINDOW_WIDTH) / 2,
-                         (screenHeight - WINDOW_HEIGHT) / 2);
+  // Centraliza a janela no ecrã
+  int larguraEcra = glutGet(GLUT_SCREEN_WIDTH);
+  int alturaEcra = glutGet(GLUT_SCREEN_HEIGHT);
+  glutInitWindowPosition((larguraEcra - LARGURA_JANELA) / 2,
+                         (alturaEcra - ALTURA_JANELA) / 2);
 
-  glutCreateWindow("Sort the Boxes or be Fired");
+  glutCreateWindow("Robotic Arm Program");
 
-  // Mudar a cor de fundo para cinzento claro
+  // Define a cor de fundo
   glClearColor(0.9f, 0.9f, 0.9f, 1.0f);
 
-  // Registar as funções de callback
+  // Registra os callbacks
   glutDisplayFunc(display);
-  glutKeyboardFunc(keyboard);
+  glutKeyboardFunc(teclado);
 
   glutMainLoop();
   return 0;
