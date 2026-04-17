@@ -428,11 +428,61 @@ void desenharTapete(void) {
   glPopMatrix();
 }
 
+void desenharMaquina() {
+  // Coordenadas base para a máquina
+  float baseX = -0.9f;
+  float baseY = -0.3f;
+
+  float larguraMaquina = 0.5f;
+  float alturaMaquina = 0.8f;
+  float alturaTelhado = 0.25f;
+
+  glPushMatrix();
+  glTranslatef(-0.2f, -0.70f, 0.0f);
+
+  // Corpo da máquina
+  glColor3f(0.3f, 0.3f, 0.3f);
+  glBegin(GL_QUADS);
+  glVertex2f(baseX, baseY);
+  glVertex2f(baseX + larguraMaquina, baseY);
+  glVertex2f(baseX + larguraMaquina, baseY + alturaMaquina);
+  glVertex2f(baseX, baseY + alturaMaquina);
+  glEnd();
+
+  // Telhado da máquina
+  glColor3f(0.25f, 0.25f, 0.25f);
+  glBegin(GL_TRIANGLES);
+  glVertex2f(baseX, baseY + alturaMaquina);
+  glVertex2f(baseX + larguraMaquina, baseY + alturaMaquina);
+  glVertex2f(baseX + larguraMaquina / 2.0f,
+             baseY + alturaMaquina + alturaTelhado);
+  glEnd();
+
+  float larguraPorta = 0.12f;
+  float alturaPorta = 0.42f;
+
+  // right aligned
+  float xPorta = baseX + larguraMaquina - larguraPorta;
+  float yPorta = alturaMaquina * 0.10f - alturaPorta * 0.5f;
+
+  // Porta da máquina
+  glColor3f(0.0f, 0.0f, 0.0f);
+  glBegin(GL_QUADS);
+  glVertex2f(xPorta, yPorta);
+  glVertex2f(xPorta + larguraPorta, yPorta);
+  glVertex2f(xPorta + larguraPorta, yPorta + alturaPorta);
+  glVertex2f(xPorta, yPorta + alturaPorta);
+  glEnd();
+
+  glPopMatrix();
+}
+
 // Função de exibição
 void display() {
   glClear(GL_COLOR_BUFFER_BIT);
 
   desenharTapete();
+  desenharMaquina();
   desenharTodasAsCaixas();
   desenharRobo();
   desenharTodosCaixotes();
