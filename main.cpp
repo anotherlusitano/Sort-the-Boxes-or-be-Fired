@@ -363,10 +363,76 @@ void desenharTodasAsCaixas() {
   }
 }
 
+void desenharTapete(void) {
+  const float larguraTapete = 0.8f;
+  const float alturaTapete = 0.3f;
+  const int etapaDoTapete = 0;
+  const int NUM_LINHAS_TAPETE = 24;
+
+  // Tapete
+  glPushMatrix();
+  glTranslatef(-0.2f, -0.65f, 0.0f); // Move o tapete para baixo
+  glColor3f(0.2f, 0.2f, 0.2f);
+
+  // Base do tapete
+  glBegin(GL_QUADS);
+  glVertex2f(-larguraTapete / 2, -alturaTapete / 2);
+  glVertex2f(larguraTapete / 2, -alturaTapete / 2);
+  glVertex2f(larguraTapete / 2, alturaTapete / 2);
+  glVertex2f(-larguraTapete / 2, alturaTapete / 2);
+  glEnd();
+
+  glColor3f(0.35f, 0.35f, 0.35f);
+
+  float larguraLinha = larguraTapete / NUM_LINHAS_TAPETE;
+
+  // Linhas do tapete
+  for (int i = 0; i < NUM_LINHAS_TAPETE; ++i) {
+    // Calcula o índice da linha com deslocamento circular.
+    // `etapaDoTapete` indica quantas posições o tapete avançou.
+    // O operador % garante que o índice volta ao início ao ultrapassar o
+    // limite.
+    int indiceDeslocado = (i + etapaDoTapete) % NUM_LINHAS_TAPETE;
+
+    // Determina a posição horizontal da linha.
+    // O tapete está centrado na origem; começamos na borda esquerda
+    // e avançamos conforme o índice deslocado.
+    float x = -larguraTapete / 2 + indiceDeslocado * larguraLinha;
+
+    // Desenha uma linha do tapete
+    glBegin(GL_QUADS);
+    glVertex2f(x, -alturaTapete / 2);
+    glVertex2f(x + larguraLinha * 0.8f, -alturaTapete / 2);
+    glVertex2f(x + larguraLinha * 0.8f, alturaTapete / 2);
+    glVertex2f(x, alturaTapete / 2);
+    glEnd();
+  }
+  glPopMatrix();
+
+  // Desenhar Barreira do tapete
+  glPushMatrix();
+  const float larguraBarreira = 0.1f;
+  const float alturaBarreira = 0.5f;
+
+  glTranslatef(0.2f, -0.65f, 0.0f); // Move a barreira para baixo
+  glColor3f(1.0f, 0.6f, 0);
+
+  // Base do tapete
+  glBegin(GL_QUADS);
+  glVertex2f(-larguraBarreira / 2, -alturaBarreira / 2);
+  glVertex2f(larguraBarreira / 2, -alturaBarreira / 2);
+  glVertex2f(larguraBarreira / 2, alturaBarreira / 2);
+  glVertex2f(-larguraBarreira / 2, alturaBarreira / 2);
+  glEnd();
+
+  glPopMatrix();
+}
+
 // Função de exibição
 void display() {
   glClear(GL_COLOR_BUFFER_BIT);
 
+  desenharTapete();
   desenharTodasAsCaixas();
   desenharRobo();
   desenharTodosCaixotes();
