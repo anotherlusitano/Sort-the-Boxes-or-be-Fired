@@ -118,11 +118,112 @@ bool dedoEstaATocarCaixa(float dedoX, float dedoY, Caixa *caixa) {
           dedoY <= caixaCentroY + caixaMeioTamanho + tolerancia);
 }
 
+// Função para desenhar a base 3D do braço robótico
+void desenharBaseBraco() {
+  float largura = 0.8f;       // Largura da base
+  float altura = 0.1f;        // Altura da base
+  float profundidade = 0.20f; // Profundidade da base
+
+  float metadeLargura = largura / 2.0f;
+  float metadeAltura = altura / 2.0f;
+  float metadeProf = profundidade / 2.0f;
+
+  // Cor cinzenta
+  Cor cinzento = {0.5f, 0.5f, 0.5f};
+
+  glPushMatrix();
+
+  glTranslatef(0.0f, -0.05f, 0.9f);
+
+  // Aplica rotação 3D para perspectiva isométrica
+  glRotatef(-10.0f, 1.0f, 0.0f, 0.0f); // Rotação em X
+  glRotatef(85.0f, 0.0f, -1.0f, 0.0f); // Rotação em Y
+
+  glBegin(GL_QUADS);
+  // Face frontal
+  glColor3f(cinzento.r, cinzento.g, cinzento.b);
+  glVertex3f(-metadeLargura, -metadeAltura, metadeProf);
+  glVertex3f(metadeLargura, -metadeAltura, metadeProf);
+  glVertex3f(metadeLargura, metadeAltura, metadeProf);
+  glVertex3f(-metadeLargura, metadeAltura, metadeProf);
+
+  // Face traseira
+  glColor3f(cinzento.r * 0.7f, cinzento.g * 0.7f, cinzento.b * 0.7f);
+  glVertex3f(-metadeLargura, -metadeAltura, -metadeProf);
+  glVertex3f(-metadeLargura, metadeAltura, -metadeProf);
+  glVertex3f(metadeLargura, metadeAltura, -metadeProf);
+  glVertex3f(metadeLargura, -metadeAltura, -metadeProf);
+
+  // Face superior
+  glColor3f(cinzento.r * 0.9f, cinzento.g * 0.9f, cinzento.b * 0.9f);
+  glVertex3f(-metadeLargura, metadeAltura, metadeProf);
+  glVertex3f(metadeLargura, metadeAltura, metadeProf);
+  glVertex3f(metadeLargura, metadeAltura, -metadeProf);
+  glVertex3f(-metadeLargura, metadeAltura, -metadeProf);
+
+  // Face inferior
+  glColor3f(cinzento.r * 0.8f, cinzento.g * 0.8f, cinzento.b * 0.8f);
+  glVertex3f(-metadeLargura, -metadeAltura, metadeProf);
+  glVertex3f(-metadeLargura, -metadeAltura, -metadeProf);
+  glVertex3f(metadeLargura, -metadeAltura, -metadeProf);
+  glVertex3f(metadeLargura, -metadeAltura, metadeProf);
+
+  // Face direita
+  glColor3f(cinzento.r * 0.85f, cinzento.g * 0.85f, cinzento.b * 0.85f);
+  glVertex3f(metadeLargura, -metadeAltura, metadeProf);
+  glVertex3f(metadeLargura, -metadeAltura, -metadeProf);
+  glVertex3f(metadeLargura, metadeAltura, -metadeProf);
+  glVertex3f(metadeLargura, metadeAltura, metadeProf);
+
+  // Face esquerda
+  glColor3f(cinzento.r * 0.75f, cinzento.g * 0.75f, cinzento.b * 0.75f);
+  glVertex3f(-metadeLargura, -metadeAltura, metadeProf);
+  glVertex3f(-metadeLargura, metadeAltura, metadeProf);
+  glVertex3f(-metadeLargura, metadeAltura, -metadeProf);
+  glVertex3f(-metadeLargura, -metadeAltura, -metadeProf);
+  glEnd();
+
+  // Desenha as arestas da base
+  glColor3f(0.0f, 0.0f, 0.0f);
+  glLineWidth(2.0f);
+
+  glBegin(GL_LINE_LOOP);
+  glVertex3f(-metadeLargura, -metadeAltura, metadeProf);
+  glVertex3f(metadeLargura, -metadeAltura, metadeProf);
+  glVertex3f(metadeLargura, metadeAltura, metadeProf);
+  glVertex3f(-metadeLargura, metadeAltura, metadeProf);
+  glEnd();
+
+  glBegin(GL_LINE_LOOP);
+  glVertex3f(-metadeLargura, -metadeAltura, -metadeProf);
+  glVertex3f(metadeLargura, -metadeAltura, -metadeProf);
+  glVertex3f(metadeLargura, metadeAltura, -metadeProf);
+  glVertex3f(-metadeLargura, metadeAltura, -metadeProf);
+  glEnd();
+
+  glBegin(GL_LINES);
+  glVertex3f(-metadeLargura, -metadeAltura, metadeProf);
+  glVertex3f(-metadeLargura, -metadeAltura, -metadeProf);
+  glVertex3f(metadeLargura, -metadeAltura, metadeProf);
+  glVertex3f(metadeLargura, -metadeAltura, -metadeProf);
+  glVertex3f(metadeLargura, metadeAltura, metadeProf);
+  glVertex3f(metadeLargura, metadeAltura, -metadeProf);
+  glVertex3f(-metadeLargura, metadeAltura, metadeProf);
+  glVertex3f(-metadeLargura, metadeAltura, -metadeProf);
+  glEnd();
+  glLineWidth(1.0f);
+
+  glPopMatrix();
+}
+
 // Function to draw the robotic arm
 void desenharRobo() {
   glPushMatrix();
   // Move o robô para a esquerda para caber o ecrã e pegar a primeira caixa
   glTranslatef(0.35f, 0.1f, -1.0f);
+
+  // Desenha a base 3D do braço robótico
+  desenharBaseBraco();
 
   // ==========================================
   // 1. O OMBRO
