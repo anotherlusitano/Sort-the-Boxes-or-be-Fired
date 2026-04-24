@@ -49,17 +49,18 @@ struct Caixote {
   float x, y;           // Coordenadas do caixote
   TipoCaixa tipoAceite; // Tipo de caixa que aceita
   Cor cor;              // Cor do caixote
+  Cor textura;          // Cor da Textura do caixote
 };
 
 // Lista de caixotes com suas coordenadas e tipos que aceitam
 // Nota: As coordenadas podem ser ajustadas conforme necessário
 const Caixote caixotes[] = {
     // Caixote Vermelho (esquerda)
-    {-0.2f, 0.65f, CAIXA_VERMELHA, {1.0f, 0.0f, 0.0f}},
+    {-0.2f, 0.65f, CAIXA_VERMELHA, {1.0f, 0.0f, 0.0f}, {0.91f, 0.65f, 0.23f}},
     // Caixote Azul (centro)
-    {0.2f, 0.65f, CAIXA_AZUL, {0.0f, 0.0f, 1.0f}},
+    {0.2f, 0.65f, CAIXA_AZUL, {0.0f, 0.0f, 1.0f}, {0.91f, 0.65f, 0.23f}},
     // Caixote Verde (direita)
-    {0.6f, 0.65f, CAIXA_VERDE, {0.0f, 1.0f, 0.0f}}};
+    {0.6f, 0.65f, CAIXA_VERDE, {0.0f, 1.0f, 0.0f}, {0.91f, 0.65f, 0.23f}}};
 const int NUM_CAIXOTES = 3;
 
 // Variáveis globais para os ângulos do braço robótico
@@ -194,47 +195,109 @@ void desenharRobo() {
 }
 
 // Função para desenhar um único caixote em coordenadas normalizadas
-void desenharCaixote(float x, float y, Cor cor) {
-  float larguraCaixote =
-      0.15f;                   // Largura do caixote em coordenadas normalizadas
-  float alturaCaixote = 0.15f; // Altura do caixote em coordenadas normalizadas
-  float larguraBorda = 0.01f;  // Espessura da borda
+void desenharCaixote(float x, float y, Cor cor, Cor textura) {
+  float largura = 0.20f;      // Largura do caixote em coordenadas normalizadas
+  float altura = 0.20f;       // Altura do caixote em coordenadas normalizadas
+  float profundidade = 0.21f; // Profundidade do caixote
 
-  // Desenha o interior do caixote
-  glColor3f(cor.r * 0.7f, cor.g * 0.7f,
-            cor.b * 0.7f); // Cor mais escura para o interior
+  float metadeLargura = largura / 2.0f;
+  float metadeAltura = altura / 2.0f;
+  float metadeProf = profundidade / 2.0f;
+
+  glPushMatrix();
+  glTranslatef(x, y, 0.25f); // Posiciona o caixote
+
+  // Aplica rotação 3D para perspectiva isométrica
+  glRotatef(45.0f, -1.5f, 1.0f, 0.0f); // Rotação em Y
+
   glBegin(GL_QUADS);
-  glVertex3f(x - larguraCaixote / 2, y - alturaCaixote / 2, 0.6f);
-  glVertex3f(x + larguraCaixote / 2, y - alturaCaixote / 2, 0.6f);
+  // Face frontal
+  glColor3f(textura.r, textura.g, textura.b);
+  glVertex3f(-metadeLargura, -metadeAltura, metadeProf);
+  glVertex3f(metadeLargura, -metadeAltura, metadeProf);
+  glVertex3f(metadeLargura, metadeAltura, metadeProf);
+  glVertex3f(-metadeLargura, metadeAltura, metadeProf);
 
-  // Usamos o `-0.05` para criar um pequeno espaço entre o fundo e a borda
-  // superior do caixote
-  glVertex3f(x + larguraCaixote / 2, y + alturaCaixote / 2 - 0.05, 0.6f);
-  glVertex3f(x - larguraCaixote / 2, y + alturaCaixote / 2 - 0.05, 0.6f);
+  // Face traseira
+  glColor3f(cor.r * 0.7f, cor.g * 0.7f, cor.b * 0.7f);
+  glVertex3f(-metadeLargura, -metadeAltura, -metadeProf);
+  glVertex3f(-metadeLargura, metadeAltura, -metadeProf);
+  glVertex3f(metadeLargura, metadeAltura, -metadeProf);
+  glVertex3f(metadeLargura, -metadeAltura, -metadeProf);
+
+  // Face inferior (fundo)
+  glColor3f(textura.r * 0.8f, textura.g * 0.8f, textura.b * 0.8f);
+  glVertex3f(-metadeLargura, -metadeAltura, metadeProf);
+  glVertex3f(-metadeLargura, -metadeAltura, -metadeProf);
+  glVertex3f(metadeLargura, -metadeAltura, -metadeProf);
+  glVertex3f(metadeLargura, -metadeAltura, metadeProf);
+
+  // Face direita
+  glColor3f(textura.r * 0.85f, textura.g * 0.85f, textura.b * 0.85f);
+  glVertex3f(metadeLargura, -metadeAltura, metadeProf);
+  glVertex3f(metadeLargura, -metadeAltura, -metadeProf);
+  glVertex3f(metadeLargura, metadeAltura, -metadeProf);
+  glVertex3f(metadeLargura, metadeAltura, metadeProf);
+
+  // Face esquerda
+  glColor3f(textura.r * 0.75f, textura.g * 0.75f, textura.b * 0.75f);
+  glVertex3f(-metadeLargura, -metadeAltura, metadeProf);
+  glVertex3f(-metadeLargura, metadeAltura, metadeProf);
+  glVertex3f(-metadeLargura, metadeAltura, -metadeProf);
+  glVertex3f(-metadeLargura, -metadeAltura, -metadeProf);
+
+  // SEM FACE SUPERIOR (abertura para receber as caixas)
   glEnd();
 
-  // Desenha as bordas (fundo e lados)
-  glColor3f(0, 0, 0); // Cor completa para as bordas
-  glLineWidth(3.0f);
-  glBegin(GL_LINE_STRIP);
-  // Linha de baixo (fundo)
-  glVertex3f(x - larguraCaixote / 2, y - alturaCaixote / 2, 0.6f);
-  glVertex3f(x + larguraCaixote / 2, y - alturaCaixote / 2, 0.6f);
-  // Linha da direita
-  glVertex3f(x + larguraCaixote / 2, y + alturaCaixote / 2, 0.6f);
+  // Desenha as arestas do caixote
+  glColor3f(0.0f, 0.0f, 0.0f);
+  glLineWidth(2.0f);
+
+  // Arestas frontal
+  glBegin(GL_LINE_LOOP);
+  glVertex3f(-metadeLargura, -metadeAltura, metadeProf);
+  glVertex3f(metadeLargura, -metadeAltura, metadeProf);
+  glVertex3f(metadeLargura, metadeAltura, metadeProf);
+  glVertex3f(-metadeLargura, metadeAltura, metadeProf);
   glEnd();
-  // Linha da esquerda
-  glBegin(GL_LINE_STRIP);
-  glVertex3f(x - larguraCaixote / 2, y + alturaCaixote / 2, 0.6f);
-  glVertex3f(x - larguraCaixote / 2, y - alturaCaixote / 2, 0.6f);
+
+  // Arestas traseira
+  glBegin(GL_LINE_LOOP);
+  glVertex3f(-metadeLargura, -metadeAltura, -metadeProf);
+  glVertex3f(metadeLargura, -metadeAltura, -metadeProf);
+  glVertex3f(metadeLargura, metadeAltura, -metadeProf);
+  glVertex3f(-metadeLargura, metadeAltura, -metadeProf);
   glEnd();
+
+  // Arestas verticais
+  glBegin(GL_LINES);
+  glVertex3f(-metadeLargura, -metadeAltura, metadeProf);
+  glVertex3f(-metadeLargura, -metadeAltura, -metadeProf);
+  glVertex3f(metadeLargura, -metadeAltura, metadeProf);
+  glVertex3f(metadeLargura, -metadeAltura, -metadeProf);
+  glVertex3f(metadeLargura, metadeAltura, metadeProf);
+  glVertex3f(metadeLargura, metadeAltura, -metadeProf);
+  glVertex3f(-metadeLargura, metadeAltura, metadeProf);
+  glVertex3f(-metadeLargura, metadeAltura, -metadeProf);
+  glEnd();
+
+  // Arestas da abertura superior
+  glBegin(GL_LINE_LOOP);
+  glVertex3f(-metadeLargura, metadeAltura, metadeProf);
+  glVertex3f(metadeLargura, metadeAltura, metadeProf);
+  glVertex3f(metadeLargura, metadeAltura, -metadeProf);
+  glVertex3f(-metadeLargura, metadeAltura, -metadeProf);
+  glEnd();
+
   glLineWidth(1.0f);
+  glPopMatrix();
 }
 
 // Função para desenhar todos os caixotes
 void desenharTodosCaixotes() {
   for (int i = 0; i < NUM_CAIXOTES; i++) {
-    desenharCaixote(caixotes[i].x, caixotes[i].y, caixotes[i].cor);
+    desenharCaixote(caixotes[i].x, caixotes[i].y, caixotes[i].cor,
+                    caixotes[i].textura);
   }
 }
 
